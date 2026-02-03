@@ -65,101 +65,99 @@ export class GitCrawler {
         }
 
         try {
-            // Utiliser l'API GitHub Search avec pagination
-            let page = 1;
-            let hasMoreResults = true;
-            let totalFound = 0;
+            // Utiliser l'API Tree pour lister TOUS les fichiers récursivement
+            const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${actualBranch}?recursive=1`;
+                console.log(`  📡 Requête Tree API: ${treeUrl}`);
 
-            while (hasMoreResults) {
-                const searchUrl = `https://api.github.com/search/code?q=filename:kustomization.yaml+repo:${owner}/${repo}&per_page=100&page=${page}`;
-                    console.log(`  📡 Requête page ${page}: ${searchUrl}`);
+            const treeResponse = await fetch(treeUrl, { headers });
 
-                const searchResponse = await fetch(searchUrl, { headers });
-
-                if (!searchResponse.ok) {
-                    if (searchResponse.status === 403) {
-                        const rateLimitReset = searchResponse.headers.get('X-RateLimit-Reset');
-                        const resetDate = rateLimitReset
-                            ? new Date(parseInt(rateLimitReset) * 1000).toLocaleTimeString()
-                            : 'inconnu';
-                            throw new Error(
-                                `Rate limit GitHub atteint. Réinitialisation à ${resetDate}. ` +
-                                    `Ajoutez un token GitHub pour augmenter la limite à 5000 req/h.`
-                            );
-                    }
-                    throw new Error(`Erreur GitHub API: ${searchResponse.status} ${searchResponse.statusText}`);
+            if (!treeResponse.ok) {
+                if (treeResponse.status === 403) {
+                    const rateLimitReset = treeResponse.headers.get('X-RateLimit-Reset');
+                    const resetDate = rateLimitReset
+                        ? new Date(parseInt(rateLimitReset) * 1000).toLocaleTimeString()
+                        : 'inconnu';
+                        throw new Error(
+                            `Rate limit GitHub atteint. Réinitialisation à ${resetDate}. ` +
+                                `Ajoutez un token GitHub pour augmenter la limite à 5000 req/h.`
+                        );
                 }
-
-                const searchData = await searchResponse.json();
-                totalFound = searchData.total_count;
-
-                console.log(`  ✓ Page ${page}: ${searchData.items.length} fichier(s) sur ${totalFound} total`);
-
-                // Traiter chaque fichier trouvé
-                for (const item of searchData.items) {
-                    const filePath = item.path;
-
-                    // Filtrer par basePath si spécifié
-                    if (searchPath && !filePath.startsWith(searchPath)) {
-                        continue;
-                    }
-
-                    console.log(`\n  📄 Traitement: ${filePath}`);
-
-                    // Télécharger le contenu
-                    const contentUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}?ref=${actualBranch}`;
-                        const contentResponse = await fetch(contentUrl, { headers });
-
-                    if (!contentResponse.ok) {
-                        console.warn(`    ⚠️ Erreur: ${contentResponse.status}`);
-                        continue;
-                    }
-
-                    const contentData = await contentResponse.json();
-
-                    // Décoder le base64 (compatible navigateur)
-                    const base64Content = contentData.content.replace(/\n/g, '');
-                    const binaryString = atob(base64Content);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
-                    }
-                    const content = new TextDecoder('utf-8').decode(bytes);
-
-                    try {
-                        const kustomization = yaml.load(content) as KustomizationYaml;
-
-                        // Extraire le chemin du dossier
-                        const dirPath = filePath.replace(/\/kustomization\.yaml$/, '') || '.';
-
-                        const node = this.createNode(dirPath, kustomization, false);
-                        nodes.push(node);
-
-                        console.log(`    ✓ Nœud créé: ${node.path} (type: ${node.type})`);
-                    } catch (err) {
-                        console.warn(`    ⚠️ Erreur parsing YAML: ${err}`);
-                    }
-                }
-
-                // Vérifier s'il y a d'autres pages
-                // L'API Search GitHub limite à 1000 résultats max (10 pages de 100)
-                if (searchData.items.length < 100 || nodes.length >= totalFound || page >= 10) {
-                    hasMoreResults = false;
-                } else {
-                    page++;
-                    // Petit délai pour éviter de taper trop fort sur l'API
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                }
+                throw new Error(`Erreur GitHub API: ${treeResponse.status} ${treeResponse.statusText}`);
             }
 
-            console.log(`\n✅ Scan GitHub terminé: ${nodes.length} nœud(s)`);
-            return nodes;
+            const treeData = await treeResponse.json();
+
+            // Vérifier si l'arbre est tronqué
+            if (treeData.truncated) {
+                console.warn(`  ⚠️ ATTENTION : L'arbre est tronqué ! (${treeData.tree.length} entrées)`);
+                console.warn(`  ⚠️ Certains fichiers peuvent manquer.`);
+            }
+
+            console.log(`  📊 Total d'entrées dans l'arbre: ${treeData.tree.length}`);
+
+            // Filtrer pour ne garder que les kustomization.yaml
+            const kustomizationFiles = treeData.tree.filter((item: any) =>
+                                                            item.type === 'blob' &&
+                                                                (item.path.endsWith('/kustomization.yaml') || item.path === 'kustomization.yaml')
+                                                           );
+
+                                                           console.log(`  ✓ ${kustomizationFiles.length} fichier(s) kustomization.yaml trouvé(s)`);
+
+                                                           // Traiter chaque fichier trouvé
+                                                           for (const item of kustomizationFiles) {
+                                                               const filePath = item.path;
+
+                                                               // Filtrer par basePath si spécifié
+                                                               if (searchPath && !filePath.startsWith(searchPath)) {
+                                                                   continue;
+                                                               }
+
+                                                               console.log(`\n  📄 Traitement: ${filePath}`);
+
+                                                               // Télécharger le contenu via l'API Contents
+                                                               const contentUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}?ref=${actualBranch}`;
+                                                                   const contentResponse = await fetch(contentUrl, { headers });
+
+                                                               if (!contentResponse.ok) {
+                                                                   console.warn(`    ⚠️ Erreur: ${contentResponse.status}`);
+                                                                   continue;
+                                                               }
+
+                                                               const contentData = await contentResponse.json();
+
+                                                               // Décoder le base64 (compatible navigateur)
+                                                               const base64Content = contentData.content.replace(/\n/g, '');
+                                                               const binaryString = atob(base64Content);
+                                                               const bytes = new Uint8Array(binaryString.length);
+                                                               for (let i = 0; i < binaryString.length; i++) {
+                                                                   bytes[i] = binaryString.charCodeAt(i);
+                                                               }
+                                                               const content = new TextDecoder('utf-8').decode(bytes);
+
+                                                               try {
+                                                                   const kustomization = yaml.load(content) as KustomizationYaml;
+
+                                                                   // Extraire le chemin du dossier
+                                                                   const dirPath = filePath.replace(/\/kustomization\.yaml$/, '') || '.';
+
+                                                                   const node = this.createNode(dirPath, kustomization, false);
+                                                                   nodes.push(node);
+
+                                                                   console.log(`    ✓ Nœud créé: ${node.path} (type: ${node.type})`);
+                                                               } catch (err) {
+                                                                   console.warn(`    ⚠️ Erreur parsing YAML: ${err}`);
+                                                               }
+                                                           }
+
+                                                           console.log(`\n✅ Scan GitHub terminé: ${nodes.length} nœud(s)`);
+                                                           return nodes;
 
         } catch (error) {
             console.error('❌ Erreur lors du scan GitHub:', error);
             throw error;
         }
     }
+
 
 
     private async scanGitLabRepo(
@@ -302,20 +300,20 @@ export class GitCrawler {
     }
 
     private createNode(
-      path: string,
-      kustomization: KustomizationYaml,
-      isRemote: boolean
+        path: string,
+        kustomization: KustomizationYaml,
+        isRemote: boolean
     ): KustomizeNode {
-      // Type par défaut : resource
-      // Sera corrigé plus tard selon comment il est référencé
-      return {
-        id: `node-${this.nodeCounter++}`,
-        path,
-        type: 'resource',  // Par défaut
-        kustomizationContent: kustomization,
-        isRemote,
-        loaded: true
-      };
+        // Type par défaut : resource
+        // Sera corrigé plus tard selon comment il est référencé
+        return {
+            id: `node-${this.nodeCounter++}`,
+            path,
+            type: 'resource',  // Par défaut
+            kustomizationContent: kustomization,
+            isRemote,
+            loaded: true
+        };
     }
 
     private parseRepoUrl(url: string): {
