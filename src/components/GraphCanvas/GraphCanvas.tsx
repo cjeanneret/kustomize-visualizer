@@ -59,14 +59,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({ graph, onNodeSelect })
             }
           },
           {
-            selector: 'node[type="base"]',
-            style: {
-              'background-color': '#3498db',
-              'shape': 'ellipse'
-            }
-          },
-          {
-            selector: 'node[type="overlay"]',
+            selector: 'node[type="resource"]',
             style: {
               'background-color': '#2ecc71',
               'shape': 'rectangle'

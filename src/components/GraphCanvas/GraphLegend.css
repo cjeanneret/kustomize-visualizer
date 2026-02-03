@@ -93,11 +93,7 @@
   border-radius: 8px;
 }
 
-.legend-shape.base {
-  background-color: #3498db;
-}
-
-.legend-shape.overlay {
+.legend-shape.resource {
   background-color: #2ecc71;
 }
 

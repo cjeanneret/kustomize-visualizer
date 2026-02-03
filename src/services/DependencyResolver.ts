@@ -26,7 +26,7 @@ export class DependencyResolver {
 
     console.log(`✓ ${edges.length} arête(s) créée(s)`);
 
-    // NOUVELLE ÉTAPE : Corriger les types basés sur comment ils sont référencés
+    // Corriger les types basés sur comment ils sont référencés
     this.correctNodeTypes(nodeMap, edges);
 
     return {
@@ -38,6 +38,7 @@ export class DependencyResolver {
 
   /**
    * Corrige les types de nœuds selon comment ils sont référencés
+   * RÈGLE SIMPLE : component si dans components:, resource sinon
    */
   private correctNodeTypes(
     nodeMap: Map<string, KustomizeNode>,
@@ -45,35 +46,31 @@ export class DependencyResolver {
   ): void {
     console.log('\n🔄 Correction des types de nœuds...');
 
-    // Compter comment chaque nœud est référencé
-    const nodeReferenceTypes = new Map<string, Set<'resource' | 'base' | 'component'>>();
+    // Collecter tous les nœuds référencés comme components
+    const componentNodeIds = new Set<string>();
 
     for (const edge of edges) {
-      if (!nodeReferenceTypes.has(edge.target)) {
-        nodeReferenceTypes.set(edge.target, new Set());
+      if (edge.type === 'component') {
+        componentNodeIds.add(edge.target);
       }
-      nodeReferenceTypes.get(edge.target)!.add(edge.type);
     }
 
-    // Appliquer les corrections
-    for (const [nodeId, refTypes] of nodeReferenceTypes.entries()) {
-      const node = Array.from(nodeMap.values()).find(n => n.id === nodeId);
-      if (!node) continue;
-
+    // Appliquer les types
+    for (const node of nodeMap.values()) {
       const oldType = node.type;
 
-      // Priorité : component > base > resource
-      if (refTypes.has('component')) {
+      if (componentNodeIds.has(node.id)) {
         node.type = 'component';
-      } else if (refTypes.has('base')) {
-        node.type = 'base';
+      } else {
+        node.type = 'resource';
       }
-      // Si seulement 'resource', garder le type déterminé par le chemin
 
       if (oldType !== node.type) {
         console.log(`  📝 ${node.path}: ${oldType} → ${node.type}`);
       }
     }
+
+    console.log(`✓ Types corrigés: ${componentNodeIds.size} components, ${nodeMap.size - componentNodeIds.size} resources`);
   }
 
   private buildEdgesForNode(
@@ -97,11 +94,11 @@ export class DependencyResolver {
       }
     }
 
-    // Traiter bases (obsolète mais encore utilisé)
+    // Traiter bases (déprécié) - les traiter comme des resources
     if (kustomization.bases && kustomization.bases.length > 0) {
-      console.log(`    📦 Bases: ${kustomization.bases.length}`);
+      console.log(`    📦 Bases (déprécié): ${kustomization.bases.length}`);
       for (const base of kustomization.bases) {
-        this.processReference(node, base, 'base', nodeMap, edges);
+        this.processReference(node, base, 'resource', nodeMap, edges);
       }
     }
 
@@ -117,21 +114,19 @@ export class DependencyResolver {
   private processReference(
     sourceNode: KustomizeNode,
     reference: string,
-    type: 'resource' | 'base' | 'component',
+    type: 'resource' | 'component',
     nodeMap: Map<string, KustomizeNode>,
     edges: DependencyEdge[]
   ): void {
     console.log(`      → ${type}: ${reference}`);
 
     if (this.isRemoteUrl(reference)) {
-      // C'est une URL distante (GitHub, etc.)
+      // C'est une URL distante
       console.log(`        ℹ️ URL distante détectée`);
 
-      // Créer un nœud virtuel pour cette dépendance distante
       const remoteNodeId = `remote-${this.edgeCounter}`;
       const remoteDisplayName = this.extractDisplayNameFromUrl(reference);
 
-      // Vérifier si on a déjà un nœud pour cette URL
       let targetNodeId = remoteNodeId;
 
       // Chercher si un nœud existe déjà avec cette URL
@@ -148,7 +143,7 @@ export class DependencyResolver {
         const virtualNode: KustomizeNode = {
           id: remoteNodeId,
           path: remoteDisplayName,
-          type: type === 'component' ? 'component' : 'base',
+          type: type,  // component ou resource selon le contexte
           kustomizationContent: {},
           isRemote: true,
           remoteUrl: reference,
@@ -158,7 +153,6 @@ export class DependencyResolver {
         console.log(`        + Nœud virtuel créé: ${remoteDisplayName}`);
       }
 
-      // Créer l'arête
       edges.push({
         id: `edge-${this.edgeCounter++}`,
         source: sourceNode.id,
@@ -185,12 +179,12 @@ export class DependencyResolver {
       } else {
         console.log(`        ⚠️ Nœud cible non trouvé: ${resolvedPath}`);
 
-        // Créer un nœud "manquant" pour visualiser la dépendance cassée
+        // Créer un nœud "manquant"
         const missingNodeId = `missing-${this.edgeCounter}`;
         const missingNode: KustomizeNode = {
           id: missingNodeId,
           path: resolvedPath,
-          type: 'base',
+          type: 'resource',
           kustomizationContent: {},
           isRemote: false,
           loaded: false
@@ -218,29 +212,20 @@ export class DependencyResolver {
   }
 
   private extractDisplayNameFromUrl(url: string): string {
-    // Extraire un nom d'affichage depuis une URL GitHub
-    // Ex: https://github.com/org/repo/components/argocd/annotations?ref=cleaning
-    // → argocd/annotations
     try {
-      // Retirer le ?ref=... si présent
       const cleanUrl = url.split('?')[0];
-
-      // Pattern GitHub
       const match = cleanUrl.match(/github\.com\/[^\/]+\/[^\/]+\/(.+)/);
       if (match) {
         return match[1];
       }
-
-      // Fallback: prendre la dernière partie de l'URL
       const parts = cleanUrl.split('/');
-      return parts.slice(-2).join('/'); // Les 2 derniers segments
+      return parts.slice(-2).join('/');
     } catch {
       return url;
     }
   }
 
   private extractLabelFromUrl(url: string): string {
-    // Extraire un label court pour l'arête
     try {
       const parts = url.split('/');
       const lastPart = parts[parts.length - 1].split('?')[0];
@@ -251,7 +236,6 @@ export class DependencyResolver {
   }
 
   private resolvePath(basePath: string, relativePath: string): string {
-    // Normaliser les chemins
     const parts = basePath === '.' ? [] : basePath.split('/').filter(p => p !== '');
     const relParts = relativePath.split('/').filter(p => p !== '');
 

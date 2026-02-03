@@ -302,41 +302,20 @@ export class GitCrawler {
     }
 
     private createNode(
-        path: string,
-        kustomization: KustomizationYaml,
-        isRemote: boolean
+      path: string,
+      kustomization: KustomizationYaml,
+      isRemote: boolean
     ): KustomizeNode {
-        const type = this.determineNodeType(path, kustomization);
-
-        return {
-            id: `node-${this.nodeCounter++}`,
-            path,
-            type,
-            kustomizationContent: kustomization,
-            isRemote,
-            loaded: true
-        };
-    }
-
-    private determineNodeType(
-        path: string,
-        kustomization: KustomizationYaml
-    ): 'base' | 'overlay' | 'component' {
-        const lowerPath = path.toLowerCase();
-
-        if (kustomization.kind === 'Component' || lowerPath.includes('/component')) {
-            return 'component';
-        }
-
-        if (lowerPath.includes('/overlay') ||
-            lowerPath.includes('/env/') ||
-                lowerPath.includes('prod') ||
-                    lowerPath.includes('dev') ||
-                        lowerPath.includes('staging')) {
-            return 'overlay';
-        }
-
-        return 'base';
+      // Type par défaut : resource
+      // Sera corrigé plus tard selon comment il est référencé
+      return {
+        id: `node-${this.nodeCounter++}`,
+        path,
+        type: 'resource',  // Par défaut
+        kustomizationContent: kustomization,
+        isRemote,
+        loaded: true
+      };
     }
 
     private parseRepoUrl(url: string): {
