@@ -67,7 +67,9 @@
         "components": "Components",
         "patches": "Patches",
         "noData": "Aucune",
-        "rawYaml": "YAML Brut"
+        "rawYaml": "YAML Brut",
+        "nodeNotLoaded": "⚠️ Nœud non chargé",
+        "nodeNotLoadedHint": "Cette dépendance n'a pas pu être chargée. Elle n'existe peut-être pas ou est inaccessible."
     },
     "errors": {
         "unknownError": "Erreur inconnue",

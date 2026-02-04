@@ -28,6 +28,29 @@ export const CollapsibleDetailsPanel: React.FC<CollapsibleDetailsPanelProps> = (
                 <>
                 <h2>{t('details.nodeDetails')}</h2>
 
+                {(!node.loaded || node.error) && (
+                    <div className="warning-banner" style={{
+                        backgroundColor: '#fff3cd',
+                        border: '1px solid #ffc107',
+                        borderRadius: '4px',
+                        padding: '12px',
+                        marginBottom: '15px',
+                        color: '#856404'
+                    }}>
+                    <strong>{t('details.nodeNotLoaded', 'Node not loaded')}</strong>
+                    {node.error && (
+                        <p style={{ margin: '8px 0 0 0', fontSize: '0.9em' }}>
+                        {node.error}
+                        </p>
+                    )}
+                    {!node.error && (
+                        <p style={{ margin: '8px 0 0 0', fontSize: '0.9em' }}>
+                        {t('details.nodeNotLoadedHint', 'This dependency could not be loaded. It may not exist or be inaccessible.')}
+                        </p>
+                    )}
+                    </div>
+                )}
+
                 <div className="node-info">
                 <div className="info-row">
                 <strong>{t('details.path')}</strong>

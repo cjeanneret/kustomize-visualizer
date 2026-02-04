@@ -67,7 +67,9 @@
         "components": "Components",
         "patches": "Patches",
         "noData": "None",
-        "rawYaml": "Raw YAML"
+        "rawYaml": "Raw YAML",
+        "nodeNotLoaded": "⚠️ Node not loaded",
+        "nodeNotLoadedHint": "This dependency could not be loaded. It may not exist or be inaccessible."
     },
     "errors": {
         "unknownError": "Unknown error",
