@@ -22,7 +22,21 @@
     "legendBase": "Base (ellipse)",
     "legendOverlay": "Overlay (rectangle)",
     "legendComponent": "Component (rounded)",
-    "rateLimitInfo": "ℹ️ API limited without authentication"
+    "rateLimitInfo": "ℹ️ API limited without authentication",
+    "tokens": {
+      "title": "API Tokens",
+      "saved": "Saved",
+      "stored": "Stored",
+      "saveButton": "Save this token",
+      "clearButton": "Clear saved token",
+      "clearAll": "Clear all tokens",
+      "confirmClearAll": "Are you sure you want to clear all saved tokens?",
+      "savedSuccess": "{{provider}} token saved",
+      "clearedSuccess": "All tokens have been cleared",
+      "saveError": "Error while saving",
+      "encryptedInfo": "Tokens are encrypted in localStorage",
+      "rateLimitHelp": "Tokens increase limits: GitHub 60→5000 req/h"
+    }
   },
   "graph": {
     "noGraphTitle": "No graph loaded",

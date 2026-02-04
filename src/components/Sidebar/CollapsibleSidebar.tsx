@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '../LanguageSwitcher/LanguageSwitcher';
+import { TokenManager } from '../../services/TokenManager';
 import './CollapsibleSidebar.css';
 
 interface CollapsibleSidebarProps {
@@ -16,6 +17,31 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLoadRe
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastLoaded, setLastLoaded] = useState<string>('');
+
+  // Indicateurs de tokens sauvegardés
+  const [hasStoredGithubToken, setHasStoredGithubToken] = useState(false);
+  const [hasStoredGitlabToken, setHasStoredGitlabToken] = useState(false);
+
+  // Charger les tokens au démarrage
+  useEffect(() => {
+    const loadTokens = async () => {
+      const gh = await TokenManager.getGitHubToken();
+      const gl = await TokenManager.getGitLabToken();
+
+      if (gh) {
+        setGithubToken(gh);
+        setHasStoredGithubToken(true);
+        console.log('✓ Token GitHub chargé depuis le localStorage');
+      }
+      if (gl) {
+        setGitlabToken(gl);
+        setHasStoredGitlabToken(true);
+        console.log('✓ Token GitLab chargé depuis le localStorage');
+      }
+    };
+
+    loadTokens();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +76,54 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLoadRe
     }
   };
 
+  // Sauvegarder le token GitHub
+  const handleSaveGithubToken = async () => {
+    try {
+      await TokenManager.saveGitHubToken(githubToken);
+      setHasStoredGithubToken(githubToken.trim() !== '');
+      alert(t('sidebar.tokens.savedSuccess', { provider: 'GitHub' }));
+    } catch (err) {
+      alert(t('sidebar.tokens.saveError'));
+    }
+  };
+
+  // Sauvegarder le token GitLab
+  const handleSaveGitlabToken = async () => {
+    try {
+      await TokenManager.saveGitLabToken(gitlabToken);
+      setHasStoredGitlabToken(gitlabToken.trim() !== '');
+      alert(t('sidebar.tokens.savedSuccess', { provider: 'GitLab' }));
+    } catch (err) {
+      alert(t('sidebar.tokens.saveError'));
+    }
+  };
+
+  // Effacer le token GitHub
+  const handleClearGithubToken = () => {
+    TokenManager.clearGitHubToken();
+    setGithubToken('');
+    setHasStoredGithubToken(false);
+  };
+
+  // Effacer le token GitLab
+  const handleClearGitlabToken = () => {
+    TokenManager.clearGitLabToken();
+    setGitlabToken('');
+    setHasStoredGitlabToken(false);
+  };
+
+  // Effacer tous les tokens
+  const handleClearAllTokens = () => {
+    if (confirm(t('sidebar.tokens.confirmClearAll'))) {
+      TokenManager.clearAll();
+      setGithubToken('');
+      setGitlabToken('');
+      setHasStoredGithubToken(false);
+      setHasStoredGitlabToken(false);
+      alert(t('sidebar.tokens.clearedSuccess'));
+    }
+  };
+
   return (
     <div className={`collapsible-sidebar left ${isCollapsed ? 'collapsed' : ''}`}>
       <button
@@ -77,41 +151,106 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({ onLoadRe
               disabled={loading}
             />
 
-            <details className="token-section">
-              <summary>🔑 API Tokens (optionnel)</summary>
+            <details className="token-section" open={!hasStoredGithubToken && !hasStoredGitlabToken}>
+              <summary>
+                🔑 {t('sidebar.tokens.title')}
+                {(hasStoredGithubToken || hasStoredGitlabToken) && (
+                  <span className="token-indicator"> ● {t('sidebar.tokens.saved')}</span>
+                )}
+              </summary>
 
-              <label htmlFor="github-token">
-                GitHub Token
-                <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="help-link">
-                  ?
-                </a>
-              </label>
-              <input
-                id="github-token"
-                type="password"
-                value={githubToken}
-                onChange={(e) => setGithubToken(e.target.value)}
-                placeholder="ghp_..."
-                disabled={loading}
-              />
+              <div className="token-field">
+                <label htmlFor="github-token">
+                  GitHub Token
+                  {hasStoredGithubToken && <span className="stored-badge">💾 {t('sidebar.tokens.stored')}</span>}
+                  <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="help-link">
+                    ?
+                  </a>
+                </label>
+                <div className="token-input-group">
+                  <input
+                    id="github-token"
+                    type="password"
+                    value={githubToken}
+                    onChange={(e) => setGithubToken(e.target.value)}
+                    placeholder="ghp_..."
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveGithubToken}
+                    disabled={!githubToken.trim()}
+                    className="save-token-btn"
+                    title={t('sidebar.tokens.saveButton')}
+                  >
+                    💾
+                  </button>
+                  {hasStoredGithubToken && (
+                    <button
+                      type="button"
+                      onClick={handleClearGithubToken}
+                      className="clear-token-btn"
+                      title={t('sidebar.tokens.clearButton')}
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
+              </div>
 
-              <label htmlFor="gitlab-token">
-                GitLab Token
-                <a href="https://gitlab.com/-/profile/personal_access_tokens" target="_blank" rel="noopener noreferrer" className="help-link">
-                  ?
-                </a>
-              </label>
-              <input
-                id="gitlab-token"
-                type="password"
-                value={gitlabToken}
-                onChange={(e) => setGitlabToken(e.target.value)}
-                placeholder="glpat-..."
-                disabled={loading}
-              />
+              <div className="token-field">
+                <label htmlFor="gitlab-token">
+                  GitLab Token
+                  {hasStoredGitlabToken && <span className="stored-badge">💾 {t('sidebar.tokens.stored')}</span>}
+                  <a href="https://gitlab.com/-/profile/personal_access_tokens" target="_blank" rel="noopener noreferrer" className="help-link">
+                    ?
+                  </a>
+                </label>
+                <div className="token-input-group">
+                  <input
+                    id="gitlab-token"
+                    type="password"
+                    value={gitlabToken}
+                    onChange={(e) => setGitlabToken(e.target.value)}
+                    placeholder="glpat-..."
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveGitlabToken}
+                    disabled={!gitlabToken.trim()}
+                    className="save-token-btn"
+                    title={t('sidebar.tokens.saveButton')}
+                  >
+                    💾
+                  </button>
+                  {hasStoredGitlabToken && (
+                    <button
+                      type="button"
+                      onClick={handleClearGitlabToken}
+                      className="clear-token-btn"
+                      title={t('sidebar.tokens.clearButton')}
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {(hasStoredGithubToken || hasStoredGitlabToken) && (
+                <button
+                  type="button"
+                  onClick={handleClearAllTokens}
+                  className="clear-all-tokens-btn"
+                >
+                  🗑️ {t('sidebar.tokens.clearAll')}
+                </button>
+              )}
 
               <small className="token-help">
-                Les tokens augmentent les limites: GitHub 60→5000 req/h
+                🔒 {t('sidebar.tokens.encryptedInfo')}
+                <br />
+                {t('sidebar.tokens.rateLimitHelp')}
               </small>
             </details>
 

@@ -22,7 +22,21 @@
     "legendBase": "Base (ellipse)",
     "legendOverlay": "Overlay (rectangle)",
     "legendComponent": "Component (arrondi)",
-    "rateLimitInfo": "ℹ️ API limitée sans authentification"
+    "rateLimitInfo": "ℹ️ API limitée sans authentification",
+    "tokens": {
+      "title": "API Tokens",
+      "saved": "Sauvegardés",
+      "stored": "Sauvegardé",
+      "saveButton": "Sauvegarder ce token",
+      "clearButton": "Effacer le token sauvegardé",
+      "clearAll": "Effacer tous les tokens",
+      "confirmClearAll": "Êtes-vous sûr de vouloir effacer tous les tokens sauvegardés ?",
+      "savedSuccess": "Token {{provider}} sauvegardé",
+      "clearedSuccess": "Tous les tokens ont été effacés",
+      "saveError": "Erreur lors de la sauvegarde",
+      "encryptedInfo": "Les tokens sont chiffrés dans le localStorage",
+      "rateLimitHelp": "Les tokens augmentent les limites: GitHub 60→5000 req/h"
+    }
   },
   "graph": {
     "noGraphTitle": "Aucun graphe chargé",

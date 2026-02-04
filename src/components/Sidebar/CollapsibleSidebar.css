@@ -281,3 +281,65 @@
   font-size: 0.7rem;
   line-height: 1.4;
 }
+
+/* Styles pour la gestion des tokens */
+.token-field {
+  margin-bottom: 1rem;
+}
+
+.token-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.token-input-group input {
+  flex: 1;
+}
+
+.save-token-btn,
+.clear-token-btn {
+  padding: 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  background: transparent;
+  transition: transform 0.2s;
+}
+
+.save-token-btn:hover,
+.clear-token-btn:hover {
+  transform: scale(1.1);
+}
+
+.save-token-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.stored-badge {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  color: #28a745;
+}
+
+.token-indicator {
+  color: #28a745;
+  font-size: 0.9rem;
+}
+
+.clear-all-tokens-btn {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 1rem;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.clear-all-tokens-btn:hover {
+  background: #c82333;
+}
