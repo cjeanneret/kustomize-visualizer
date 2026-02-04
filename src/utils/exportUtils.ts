@@ -43,10 +43,10 @@ export const exportToMermaid = (graph: KustomizeGraph, filename: string = 'kusto
     const target = sanitizeId(edge.target);
     const label = edge.label || edge.type;
     
-    if (edge.type === 'base') {
-      mermaid += `  ${source} -.${label}.-> ${target}\n`;
+    if (edge.type === 'component') {
+      mermaid += `  ${source} <===.${label}.=== ${target}\n`;
     } else {
-      mermaid += `  ${source} --${label}--> ${target}\n`;
+      mermaid += `  ${source} <---${label}--- ${target}\n`;
     }
   }
   
