@@ -12,8 +12,8 @@ export const CollapsibleDetailsPanel: React.FC<CollapsibleDetailsPanelProps> = (
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     const typeLabel = node?.type === 'component' 
-        ? t('details.typeComponent') 
-        : t('details.typeResource');;
+        ? "component" 
+        : "resource";;
 
         return (
             <div className={`collapsible-sidebar right ${isCollapsed ? 'collapsed' : ''}`}>

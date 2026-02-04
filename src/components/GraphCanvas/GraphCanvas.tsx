@@ -4,6 +4,7 @@ import cytoscape, { Core, ElementDefinition } from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import type { KustomizeGraph } from '../../types/kustomize.types';
 import { GraphLegend } from './GraphLegend';
+import { truncatePathForDisplay } from '../../utils/pathUtils';
 import { exportToPNG, exportToMermaid } from '../../utils/exportUtils';
 
 import './GraphCanvas.css';
@@ -190,7 +191,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({ graph, onNodeSelect })
             elements.push({
                 data: {
                     id: node.id,
-                    label: node.path || 'root',
+                    label: truncatePathForDisplay(node.path || 'root', 30, 2),
                     type: node.type,
                     loaded: node.loaded ? 'true' : 'false'
                 }
