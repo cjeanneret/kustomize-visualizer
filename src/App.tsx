@@ -33,7 +33,7 @@ function App() {
     if (isLocal) {
       nodes = await crawler.scanLocalDirectory();
     } else {
-      nodes = await crawler.scanRemoteRepository(source);
+      nodes = await crawler.crawlFromOverlay(source);
     }
 
     console.log(`✓ ${nodes.length} nœud(s) trouvé(s)`);
