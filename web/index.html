@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kustomap</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/cytoscape-svg@0.4.0/cytoscape-svg.js"></script>
@@ -14,7 +15,10 @@
     <!-- FORM SECTION -->
     <div id="form-section">
         <div class="form-container">
-            <h1>🔍 Kustomap</h1>
+            <h1 class="form-title">
+                <img src="/images/logo.png" alt="" class="logo-form" aria-hidden="true">
+                <span class="form-title-text"><span class="logo-k">K</span>ustomap</span>
+            </h1>
 
             <div id="error" class="error-box hidden">
                 <strong>Error:</strong> <span id="error-message"></span>
@@ -85,7 +89,10 @@
     <div id="graph-section" class="hidden">
         <!-- Toolbar -->
         <div id="toolbar">
-            <h2>📊 Dependency Graph</h2>
+            <h2 class="toolbar-title">
+                <img src="/images/logo.png" alt="Kustomap" class="logo-toolbar" width="120" height="36">
+                <span>Dependency Graph</span>
+            </h2>
             <div id="toolbar-controls">
                 <button id="back-btn">← Back to Form</button>
                 <button id="fit-btn">Fit</button>

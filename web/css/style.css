@@ -34,10 +34,26 @@ body, html {
     width: 100%;
 }
 
-.form-container h1 {
+.form-container h1.form-title {
     margin-bottom: 30px;
     color: #2c3e50;
     text-align: center;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.form-container .logo-form {
+    height: 1.4em;
+    width: auto;
+    vertical-align: middle;
+    object-fit: contain;
+}
+
+.form-container .form-title .logo-k {
+    color: #0376ed;
 }
 
 .form-group {
@@ -217,9 +233,18 @@ button:disabled {
     z-index: 100;
 }
 
-#toolbar h2 {
+#toolbar h2.toolbar-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     font-size: 18px;
     font-weight: 600;
+}
+
+#toolbar .logo-toolbar {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
 }
 
 #toolbar-controls {
