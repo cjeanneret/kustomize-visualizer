@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/types"
+	"github.com/cjeanner/kustomap/internal/types"
 )
 
 // ToMermaid converts a kustomize dependency graph to Mermaid flowchart syntax.

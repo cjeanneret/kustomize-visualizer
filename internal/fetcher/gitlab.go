@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/repository"
+	"github.com/cjeanner/kustomap/internal/repository"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 

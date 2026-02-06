@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/repository"
+	"github.com/cjeanner/kustomap/internal/repository"
 )
 
 // KustomizeReference represents a reference in kustomization.yaml

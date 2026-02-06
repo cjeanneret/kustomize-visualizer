@@ -3,7 +3,7 @@ package fetcher
 import (
 	"fmt"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/repository"
+	"github.com/cjeanner/kustomap/internal/repository"
 )
 
 // Fetcher interface for retrieving files from remote repositories

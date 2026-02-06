@@ -3,7 +3,7 @@ package fetcher
 import (
 	"testing"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/repository"
+	"github.com/cjeanner/kustomap/internal/repository"
 )
 
 func TestNewFetcher_GitHub(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/types"
+	"github.com/cjeanner/kustomap/internal/types"
 )
 
 func TestToMermaid_NilOrEmpty(t *testing.T) {

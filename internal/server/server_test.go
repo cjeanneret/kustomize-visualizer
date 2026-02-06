@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/storage"
-	"github.com/cjeanner/kustomize-visualizer/internal/types"
+	"github.com/cjeanner/kustomap/internal/storage"
+	"github.com/cjeanner/kustomap/internal/types"
 )
 
 func TestNew(t *testing.T) {

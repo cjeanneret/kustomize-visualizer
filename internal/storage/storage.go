@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/types"
+	"github.com/cjeanner/kustomap/internal/types"
 )
 
 // Storage interface for graph persistence

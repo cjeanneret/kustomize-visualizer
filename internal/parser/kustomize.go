@@ -6,9 +6,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/fetcher"
-	"github.com/cjeanner/kustomize-visualizer/internal/repository"
-	"github.com/cjeanner/kustomize-visualizer/internal/types"
+	"github.com/cjeanner/kustomap/internal/fetcher"
+	"github.com/cjeanner/kustomap/internal/repository"
+	"github.com/cjeanner/kustomap/internal/types"
 	"gopkg.in/yaml.v3"
 )
 

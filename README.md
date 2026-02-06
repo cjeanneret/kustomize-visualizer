@@ -1,4 +1,4 @@
-# Kustomize Visualizer
+# Kustomap
 
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 ![AI-Assisted](https://img.shields.io/badge/AI--Assisted-Perplexity-blueviolet.svg)
@@ -19,17 +19,17 @@ A web application to visualize and explore Kustomize overlay structures in GitOp
 
 | |
 |:--:|
-| ![Main view](screenshots/kustomize-visualizer-01.png) |
+| ![Main view](screenshots/kustomap-01.png) |
 | *Main view — enter a repo URL and explore the overlay graph* |
 
 | |
 |:--:|
-| ![Graph exploration](screenshots/kustomize-visualizer-02.png) |
+| ![Graph exploration](screenshots/kustomap-02.png) |
 | *Graph exploration — bases, overlays, and resources* |
 
 | |
 |:--:|
-| ![Node details](screenshots/kustomize-visualizer-03.png) |
+| ![Node details](screenshots/kustomap-03.png) |
 | *Node details — inspect resources and manifests* |
 
 ## Prerequisites
@@ -42,11 +42,14 @@ A web application to visualize and explore Kustomize overlay structures in GitOp
 ### Native (Go)
 
 ```bash
-git clone https://github.com/cjeanner/kustomize-visualizer.git
-cd kustomize-visualizer
+git clone https://github.com/cjeanner/kustomap.git
+cd kustomap
 
 # Run directly
 go run .
+
+# Or build a kustomap binary
+go build -o kustomap .
 
 # Optional: custom port (default 3000, or set PORT)
 go run . -port 8080
@@ -58,12 +61,12 @@ Then open **http://localhost:3000**.
 
 ```bash
 # Build
-podman build -t kustomize-visualizer:latest -f Containerfile .
-# or: docker build -t kustomize-visualizer:latest -f Containerfile .
+podman build -t kustomap:latest -f Containerfile .
+# or: docker build -t kustomap:latest -f Containerfile .
 
 # Run (server listens on 3000 inside the container)
-podman run --rm -d -p 8080:3000 --name kustomize-viz kustomize-visualizer:latest
-# or: docker run --rm -d -p 8080:3000 --name kustomize-viz kustomize-visualizer:latest
+podman run --rm -d -p 8080:3000 --name kustomap kustomap:latest
+# or: docker run --rm -d -p 8080:3000 --name kustomap kustomap:latest
 ```
 
 Then open **http://localhost:8080**.
@@ -71,8 +74,8 @@ Then open **http://localhost:8080**.
 To stop and remove:
 
 ```bash
-podman stop kustomize-viz
-# or: docker stop kustomize-viz
+podman stop kustomap
+# or: docker stop kustomap
 ```
 
 ## AI-assisted development

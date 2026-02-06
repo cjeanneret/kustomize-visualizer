@@ -43,7 +43,7 @@ async function deriveKey(password, salt) {
 async function encryptToken(plaintext) {
     const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
     const iv = crypto.getRandomValues(new Uint8Array(AES_GCM_IV_LENGTH));
-    const password = (window.location?.origin || '') + 'kustomize-visualizer-token-v1';
+    const password = (window.location?.origin || '') + 'kustomap-token-v1';
     const key = await deriveKey(password, salt);
 
     const enc = new TextEncoder();
@@ -73,7 +73,7 @@ async function decryptToken(encoded) {
         const salt = Uint8Array.from(atob(payload.s), (c) => c.charCodeAt(0));
         const iv = Uint8Array.from(atob(payload.i), (c) => c.charCodeAt(0));
         const ciphertext = Uint8Array.from(atob(payload.c), (c) => c.charCodeAt(0));
-        const password = (window.location?.origin || '') + 'kustomize-visualizer-token-v1';
+        const password = (window.location?.origin || '') + 'kustomap-token-v1';
         const key = await deriveKey(password, salt);
 
         const decrypted = await crypto.subtle.decrypt(

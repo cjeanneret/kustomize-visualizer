@@ -3,7 +3,7 @@ package storage
 import (
 	"testing"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/types"
+	"github.com/cjeanner/kustomap/internal/types"
 )
 
 func TestNewMemoryStorage(t *testing.T) {

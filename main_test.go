@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/server"
-	"github.com/cjeanner/kustomize-visualizer/internal/storage"
+	"github.com/cjeanner/kustomap/internal/server"
+	"github.com/cjeanner/kustomap/internal/storage"
 )
 
 func TestParsePort(t *testing.T) {

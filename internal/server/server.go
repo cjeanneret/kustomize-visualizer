@@ -15,11 +15,11 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/export"
-	"github.com/cjeanner/kustomize-visualizer/internal/fetcher"
-	"github.com/cjeanner/kustomize-visualizer/internal/parser"
-	"github.com/cjeanner/kustomize-visualizer/internal/repository"
-	"github.com/cjeanner/kustomize-visualizer/internal/storage"
+	"github.com/cjeanner/kustomap/internal/export"
+	"github.com/cjeanner/kustomap/internal/fetcher"
+	"github.com/cjeanner/kustomap/internal/parser"
+	"github.com/cjeanner/kustomap/internal/repository"
+	"github.com/cjeanner/kustomap/internal/storage"
 )
 
 // AnalyzeRequest is the JSON body for POST /api/v1/analyze.

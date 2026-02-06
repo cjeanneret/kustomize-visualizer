@@ -11,8 +11,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/cjeanner/kustomize-visualizer/internal/server"
-	"github.com/cjeanner/kustomize-visualizer/internal/storage"
+	"github.com/cjeanner/kustomap/internal/server"
+	"github.com/cjeanner/kustomap/internal/storage"
 )
 
 const defaultPort = 3000
