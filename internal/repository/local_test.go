@@ -23,6 +23,15 @@ func TestDetectLocalRepository(t *testing.T) {
 	if out, err := exec.Command("git", "init", tmpDir).CombinedOutput(); err != nil {
 		t.Fatalf("git init: %v (%s)", err, string(out))
 	}
+	// Set user identity for CI environments that lack global git config
+	for _, args := range [][]string{
+		{"-C", tmpDir, "config", "user.name", "Test User"},
+		{"-C", tmpDir, "config", "user.email", "test@example.com"},
+	} {
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			t.Fatalf("git config: %v (%s)", err, string(out))
+		}
+	}
 
 	// Subdir: deploy/overlay
 	overlayDir := filepath.Join(tmpDir, "deploy", "overlay")
