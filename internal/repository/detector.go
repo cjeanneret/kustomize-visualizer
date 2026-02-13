@@ -15,6 +15,7 @@ type RepositoryType string
 const (
 	GitHub  RepositoryType = "github"
 	GitLab  RepositoryType = "gitlab"
+	Local   RepositoryType = "local"
 	Unknown RepositoryType = "unknown"
 )
 
@@ -26,6 +27,9 @@ type RepositoryInfo struct {
 	BaseURL       string
 	Path          string
 	AmbiguousPath string
+
+	// RootPath is the absolute path to the repository root. Used only when Type == Local.
+	RootPath string
 }
 
 // DetectRepository parses the URL and determines the repository type
@@ -232,5 +236,8 @@ func parseGitLabURL(path, baseURL string) (*RepositoryInfo, error) {
 }
 
 func (r *RepositoryInfo) String() string {
+	if r.Type == Local {
+		return fmt.Sprintf("local:%s@%s", r.Path, r.Ref)
+	}
 	return fmt.Sprintf("%s:%s/%s@%s", r.Type, r.Owner, r.Repo, r.Ref)
 }
