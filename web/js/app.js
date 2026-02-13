@@ -235,6 +235,8 @@ class App {
         this.exportSvgBtn = document.getElementById('export-svg-btn');
         this.exportMermaidBtn = document.getElementById('export-mermaid-btn');
         this.downloadCABundleBtn = document.getElementById('download-ca-bundle-btn');
+        this.localBranchBadge = document.getElementById('local-branch-badge');
+        this.localBranchValue = document.getElementById('local-branch-value');
         this.sidebar = document.getElementById('sidebar');
         this.sidebarContent = document.getElementById('sidebar-content');
         this.closeSidebar = document.getElementById('close-sidebar');
@@ -242,11 +244,13 @@ class App {
         this.currentGraphId = null;
         this.currentGraphData = null;
         this.cy = null;
+        this.localEnabled = false;
+        this.browseCurrentPath = '';
 
         this.init();
     }
 
-    init() {
+    async init() {
         this.form.addEventListener('submit', (e) => this.handleSubmit(e));
         this.backBtn.addEventListener('click', () => this.showForm());
         this.closeSidebar.addEventListener('click', () => this.hideSidebar());
@@ -261,6 +265,147 @@ class App {
         this.setupTokenPersistence();
         this.setupTokenVisibilityToggles();
         document.getElementById('clear-tokens-btn')?.addEventListener('click', () => this.clearStoredTokens());
+
+        try {
+            const res = await fetch('/api/v1/config');
+            if (res.ok) {
+                const cfg = await res.json();
+                this.localEnabled = !!cfg.local_enabled;
+                this.updateFormForLocalMode();
+                this.setupBrowseModal();
+            }
+        } catch (_) {
+            /* config fetch failed; keep defaults */
+        }
+    }
+
+    updateFormForLocalMode() {
+        const urlInputRow = document.getElementById('url-input-row');
+        const browseBtn = document.getElementById('browse-btn');
+        const urlInput = document.getElementById('url');
+
+        if (this.localEnabled && browseBtn) {
+            browseBtn.classList.remove('hidden');
+            if (urlInputRow && !urlInputRow.classList.contains('input-with-browse')) {
+                urlInputRow.classList.remove('hidden');
+            }
+            if (urlInput) {
+                urlInput.placeholder = 'e.g. https://github.com/user/repo or ~/my-kustomize/repo';
+            }
+        } else if (browseBtn) {
+            browseBtn.classList.add('hidden');
+            if (urlInput) {
+                urlInput.placeholder = 'e.g., https://github.com/user/repo or gitlab:user/repo';
+            }
+        }
+    }
+
+    setupBrowseModal() {
+        const modal = document.getElementById('browse-modal');
+        const closeBtn = document.getElementById('browse-modal-close');
+        const backdrop = document.getElementById('browse-modal-backdrop');
+        const browseBtn = document.getElementById('browse-btn');
+        const usePathBtn = document.getElementById('browse-use-path-btn');
+
+        if (!modal || !browseBtn) return;
+
+        browseBtn.addEventListener('click', () => this.openBrowseModal());
+
+        const closeModal = () => modal?.classList.add('hidden');
+        closeBtn?.addEventListener('click', closeModal);
+        backdrop?.addEventListener('click', closeModal);
+
+        usePathBtn?.addEventListener('click', () => {
+            const urlInput = document.getElementById('url');
+            if (urlInput && this.browseCurrentPath) {
+                urlInput.value = this.browseCurrentPath;
+            }
+            closeModal();
+        });
+    }
+
+    async openBrowseModal() {
+        const modal = document.getElementById('browse-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        this.browseCurrentPath = '';
+        await this.loadBrowseDirs();
+    }
+
+    async loadBrowseDirs(path) {
+        const listEl = document.getElementById('browse-list');
+        const loadingEl = document.getElementById('browse-loading');
+        const breadcrumbEl = document.getElementById('browse-breadcrumb');
+        const usePathBtn = document.getElementById('browse-use-path-btn');
+
+        if (!listEl || !loadingEl) return;
+
+        loadingEl.classList.remove('hidden');
+        listEl.innerHTML = '';
+        if (usePathBtn) usePathBtn.disabled = true;
+
+        /* Always use POST with JSON body to avoid URL length limits and keep one code path */
+        const fetchOpts = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: path || '' })
+        };
+
+        try {
+            const res = await fetch('/api/v1/browse', fetchOpts);
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || res.statusText);
+            }
+            let dirs;
+            try {
+                dirs = await res.json();
+            } catch (parseErr) {
+                throw new Error('Invalid JSON in response: ' + (parseErr.message || 'parse error'));
+            }
+            if (!Array.isArray(dirs)) {
+                const hint = dirs === null ? 'null' : (typeof dirs === 'object' ? (dirs.message || JSON.stringify(dirs).slice(0, 80)) : String(dirs));
+                throw new Error('Server returned unexpected format (expected array): ' + hint);
+            }
+            this.browseCurrentPath = path || '~';
+
+            /* Build breadcrumb */
+            if (breadcrumbEl) {
+                const parts = (path || '').split('/').filter(Boolean);
+                let html = '<a href="#" data-path="">Home</a>';
+                parts.forEach((p, i) => {
+                    const acc = '/' + parts.slice(0, i + 1).join('/');
+                    html += ' <span class="separator">/</span> <a href="#" data-path="' + acc + '">' + p + '</a>';
+                });
+                breadcrumbEl.innerHTML = html;
+                breadcrumbEl.querySelectorAll('a').forEach(a => {
+                    a.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.loadBrowseDirs(a.dataset.path ?? '');
+                    });
+                });
+            }
+
+            if (dirs.length === 0 && path) {
+                listEl.innerHTML = '<li style="cursor:default;color:#666;">No subdirectories here. Use "Use this path" to select.</li>';
+            }
+            dirs.forEach(dirPath => {
+                const name = dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
+                const li = document.createElement('li');
+                li.innerHTML = '<span class="icon-folder">📁</span> ' + name;
+                li.dataset.path = dirPath;
+                li.addEventListener('click', () => this.loadBrowseDirs(dirPath));
+                listEl.appendChild(li);
+            });
+            if (usePathBtn) {
+                usePathBtn.disabled = false;
+                usePathBtn.textContent = 'Use this path';
+            }
+        } catch (err) {
+            listEl.innerHTML = '<li style="cursor:default;color:#c33;">' + (err.message || 'Failed to load') + '</li>';
+        } finally {
+            loadingEl.classList.add('hidden');
+        }
     }
 
     setupTokenVisibilityToggles() {
@@ -469,24 +614,39 @@ class App {
                 this.showNodeDetails(nodeData);
             });
             setupBuildModal(this);
+            this.updateLocalBranchUI(graphData);
             this.updateCABundleUI(graphData);
         } catch (error) {
             this.showGraphError(error.message);
         }
     }
 
+    updateLocalBranchUI(graphData) {
+        if (this.localBranchBadge && this.localBranchValue) {
+            if (graphData.local_branch) {
+                this.localBranchValue.textContent = graphData.local_branch;
+                this.localBranchBadge.classList.remove('hidden');
+            } else {
+                this.localBranchBadge.classList.add('hidden');
+            }
+        }
+    }
+
     updateCABundleUI(graphData) {
-        const hasValidBundle = graphData.ca_bundle && graphData.ca_bundle_valid !== false;
+        const isLocal = !!graphData.local_branch;
+        const hasValidBundle = !isLocal && graphData.ca_bundle && graphData.ca_bundle_valid !== false;
+
         this.downloadCABundleBtn.disabled = !hasValidBundle;
         this.downloadCABundleBtn.title = hasValidBundle
             ? 'Download CA bundle for Argo CD'
-            : 'CA bundle unavailable';
+            : (isLocal ? 'CA bundle not used for local repositories' : 'CA bundle unavailable');
+        this.downloadCABundleBtn.classList.toggle('hidden', isLocal);
 
-        if (graphData.ca_bundle_valid === false && graphData.ca_bundle_error) {
+        if (isLocal || !(graphData.ca_bundle_valid === false && graphData.ca_bundle_error)) {
+            this.caBundleWarningDiv.classList.add('hidden');
+        } else {
             this.caBundleWarningMessage.textContent = graphData.ca_bundle_error;
             this.caBundleWarningDiv.classList.remove('hidden');
-        } else {
-            this.caBundleWarningDiv.classList.add('hidden');
         }
     }
 

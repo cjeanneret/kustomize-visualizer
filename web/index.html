@@ -26,14 +26,17 @@
 
             <form id="analyze-form">
                 <div class="form-group">
-                    <label for="url">Repository URL *</label>
-                    <input
-                        type="text"
-                        id="url"
-                        name="url"
-                        required
-                        placeholder="e.g., https://github.com/user/repo or gitlab:user/repo"
-                    >
+                    <label for="url">Repository URL or local path *</label>
+                    <div class="input-with-browse" id="url-input-row">
+                        <input
+                            type="text"
+                            id="url"
+                            name="url"
+                            required
+                            placeholder="e.g., https://github.com/user/repo or ~/my-kustomize/repo"
+                        >
+                        <button type="button" id="browse-btn" class="btn-browse hidden" title="Browse local directories" aria-label="Browse">Browse</button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -89,10 +92,16 @@
     <div id="graph-section" class="hidden">
         <!-- Toolbar -->
         <div id="toolbar">
-            <h2 class="toolbar-title">
-                <img src="/images/logo.png" alt="Kustomap" class="logo-toolbar" width="120" height="36">
-                <span>Dependency Graph</span>
-            </h2>
+            <div class="toolbar-left">
+                <h2 class="toolbar-title">
+                    <img src="/images/logo.png" alt="Kustomap" class="logo-toolbar" width="120" height="36">
+                    <span>Dependency Graph</span>
+                </h2>
+                <div id="local-branch-badge" class="local-branch-badge hidden">
+                    <span class="local-branch-label">Branch:</span>
+                    <span id="local-branch-value"></span>
+                </div>
+            </div>
             <div id="toolbar-controls">
                 <button id="back-btn">← Back to Form</button>
                 <button id="fit-btn">Fit</button>
@@ -151,6 +160,25 @@
         <!-- Graph Error (hidden by default) -->
         <div id="graph-error" class="hidden">
             <span id="graph-error-message"></span>
+        </div>
+    </div>
+
+    <!-- Browse modal (local path picker) -->
+    <div id="browse-modal" class="modal hidden">
+        <div class="modal-backdrop" id="browse-modal-backdrop"></div>
+        <div class="modal-panel">
+            <div class="modal-header">
+                <h3>Browse local directories</h3>
+                <button type="button" id="browse-modal-close" class="modal-close" title="Close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="browse-breadcrumb" id="browse-breadcrumb"></div>
+                <div class="browse-loading" id="browse-loading">Loading…</div>
+                <ul class="browse-list" id="browse-list"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="browse-use-path-btn" class="btn-primary">Use this path</button>
+            </div>
         </div>
     </div>
 
