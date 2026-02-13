@@ -89,6 +89,10 @@ func TestSameRepoAsEntry(t *testing.T) {
 	diffOwnerSameRepo := &repository.RepositoryInfo{Type: repository.GitLab, Owner: "other", Repo: "bar"}
 	sameRepo := &repository.RepositoryInfo{Type: repository.GitHub, Owner: "foo", Repo: "bar"} // same owner/repo as entryGitLab, type can differ
 
+	entryLocal := &repository.RepositoryInfo{Type: repository.Local, RootPath: "/home/user/my-repo", Ref: "main"}
+	localSameRoot := &repository.RepositoryInfo{Type: repository.Local, RootPath: "/home/user/my-repo", Ref: "main"}
+	localOtherRoot := &repository.RepositoryInfo{Type: repository.Local, RootPath: "/home/user/other-repo", Ref: "main"}
+
 	cases := []struct {
 		name   string
 		entry  *repository.RepositoryInfo
@@ -103,6 +107,9 @@ func TestSameRepoAsEntry(t *testing.T) {
 		{"different repo same owner", entryGitLab, sameOwnerDiffRepo, false},
 		{"different owner same repo", entryGitLab, diffOwnerSameRepo, false},
 		{"different repo and owner", entryGitLab, entryGitHub, false},
+		{"local same root", entryLocal, localSameRoot, true},
+		{"local different root", entryLocal, localOtherRoot, false},
+		{"local entry empty root", &repository.RepositoryInfo{Type: repository.Local, RootPath: ""}, localSameRoot, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

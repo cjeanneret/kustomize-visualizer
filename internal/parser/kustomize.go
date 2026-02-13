@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/cjeanner/kustomap/internal/fetcher"
 	"github.com/cjeanner/kustomap/internal/repository"
 	"github.com/cjeanner/kustomap/internal/types"
+	"github.com/cjeanner/kustomap/internal/validation"
 	"gopkg.in/yaml.v3"
 )
 
@@ -41,11 +43,14 @@ type Parser struct {
 	FetcherFactory FetcherFactory // optional; used in tests to inject mock fetchers
 }
 
-// sameRepoAsEntry reports whether current is the same repo (owner+repo) as entry.
-// Used to decide whether a relative ref should use the entry fetcher or a new fetcher.
+// sameRepoAsEntry reports whether current is the same repo as entry.
+// For GitHub/GitLab: owner+repo. For Local: RootPath.
 func sameRepoAsEntry(entry, current *repository.RepositoryInfo) bool {
 	if entry == nil || current == nil {
 		return false
+	}
+	if entry.Type == repository.Local && current.Type == repository.Local {
+		return entry.RootPath != "" && entry.RootPath == current.RootPath
 	}
 	return entry.Owner == current.Owner && entry.Repo == current.Repo
 }
@@ -63,9 +68,9 @@ func NewParser(f fetcher.Fetcher, repoInfo *repository.RepositoryInfo) *Parser {
 	return &Parser{
 		fetcher:     f,
 		repoInfo:    repoInfo,
-		tokens:      make(map[repository.RepositoryType]string),
-		graph:       &types.Graph{Elements: []types.Element{}, BaseURLs: make(map[string]string)},
-		visitedURLs: make(map[string]bool),
+		tokens:         make(map[repository.RepositoryType]string),
+		graph:          &types.Graph{Elements: []types.Element{}, BaseURLs: make(map[string]string), LocalRootPaths: make(map[string]string)},
+		visitedURLs:    make(map[string]bool),
 	}
 }
 
@@ -168,22 +173,74 @@ func (p *Parser) processReference(parentID, ref, refType, currentPath string, cu
 	case ReferenceRelative:
 		childPath = resolvePath(currentPath, kustomizeRef.RelativePath)
 		childRepo = currentRepo
-		// Use the fetcher for the repo we're currently in. If we're still in the
-		// entry-point repo, use p.fetcher; otherwise create a fetcher for currentRepo
-		// (e.g. we followed a component to GitHub and now have a relative ref like ./deployment).
-		if sameRepoAsEntry(p.repoInfo, currentRepo) {
-			childFetcher = p.fetcher
+
+		// When current repo is Local, check if the resolved path escapes the root.
+		// If so, treat as an external local repo and create a fetcher for it.
+		if currentRepo.Type == repository.Local && currentRepo.RootPath != "" {
+			baseDir := filepath.Join(currentRepo.RootPath, filepath.FromSlash(currentPath))
+			absPath := filepath.Clean(filepath.Join(baseDir, filepath.FromSlash(kustomizeRef.RelativePath)))
+			rootClean := filepath.Clean(currentRepo.RootPath)
+			rootPrefix := rootClean + string(filepath.Separator)
+			escapes := absPath != rootClean && !strings.HasPrefix(absPath, rootPrefix)
+
+			if escapes {
+				// Path references a directory outside the current repo; validate and resolve as external local repo
+				validatedPath, err := validation.ValidateLocalPath(absPath)
+				if err != nil {
+					childID := p.buildNodeID(currentRepo, childPath)
+					p.addErrorNode(childID, childPath, fmt.Sprintf("Invalid local path: %v", err), currentRepo.BaseURL)
+					p.addEdge(parentID, childID, refType)
+					return nil
+				}
+				extRepo, err := repository.DetectLocalRepository(validatedPath)
+				if err != nil {
+					childID := p.buildNodeID(currentRepo, childPath)
+					p.addErrorNode(childID, childPath, fmt.Sprintf("Failed to detect repository: %v", err), currentRepo.BaseURL)
+					p.addEdge(parentID, childID, refType)
+					return nil
+				}
+				childRepo = extRepo
+				childPath = extRepo.Path
+				lf, err := fetcher.NewLocalFetcher(extRepo, "")
+				if err != nil {
+					childID := p.buildNodeID(extRepo, childPath)
+					p.addErrorNode(childID, childPath, fmt.Sprintf("Failed to create fetcher: %v", err), extRepo.BaseURL)
+					p.addEdge(parentID, childID, refType)
+					return nil
+				}
+				childFetcher = lf
+			} else {
+				// Path stays within current repo
+				if sameRepoAsEntry(p.repoInfo, currentRepo) {
+					childFetcher = p.fetcher
+				} else {
+					tok := p.tokens[currentRepo.Type]
+					var err error
+					childFetcher, err = p.getFetcherForRepo(currentRepo, tok)
+					if err != nil {
+						childID := p.buildNodeID(currentRepo, childPath)
+						p.addErrorNode(childID, childPath, fmt.Sprintf("Failed to create fetcher: %v", err), currentRepo.BaseURL)
+						p.addEdge(parentID, childID, refType)
+						return nil
+					}
+				}
+			}
 		} else {
-			tok := p.tokens[currentRepo.Type]
-			var err error
-			childFetcher, err = p.getFetcherForRepo(currentRepo, tok)
-		if err != nil {
-			childID := p.buildNodeID(currentRepo, childPath)
-			p.addErrorNode(childID, childPath, fmt.Sprintf("Failed to create fetcher: %v", err), currentRepo.BaseURL)
-			p.addEdge(parentID, childID, refType)
-			return nil
+			// Remote repo: use fetcher for current repo
+			if sameRepoAsEntry(p.repoInfo, currentRepo) {
+				childFetcher = p.fetcher
+			} else {
+				tok := p.tokens[currentRepo.Type]
+				var err error
+				childFetcher, err = p.getFetcherForRepo(currentRepo, tok)
+				if err != nil {
+					childID := p.buildNodeID(currentRepo, childPath)
+					p.addErrorNode(childID, childPath, fmt.Sprintf("Failed to create fetcher: %v", err), currentRepo.BaseURL)
+					p.addEdge(parentID, childID, refType)
+					return nil
+				}
+			}
 		}
-	}
 
 	case ReferenceRemote:
 		childRepo = kustomizeRef.RepoInfo
@@ -202,6 +259,14 @@ func (p *Parser) processReference(parentID, ref, refType, currentPath string, cu
 
 	// Build unique node ID
 	childID := p.buildNodeID(childRepo, childPath)
+
+	// Store per-node local root for nodes in external local repos (used by build endpoint)
+	if childRepo.Type == repository.Local && childRepo.RootPath != "" && !sameRepoAsEntry(p.repoInfo, childRepo) {
+		if p.graph.LocalRootPaths == nil {
+			p.graph.LocalRootPaths = make(map[string]string)
+		}
+		p.graph.LocalRootPaths[childID] = childRepo.RootPath
+	}
 
 	// Try to fetch the child kustomization
 	content, err := childFetcher.FindKustomizationInPath(childPath)
@@ -272,10 +337,14 @@ func (p *Parser) processResource(parentID, resource, currentPath string, current
 	return p.processReference(parentID, resource, "resource", currentPath, currentRepo)
 }
 
-// buildNodeID creates a unique identifier for a node
+// buildNodeID creates a unique identifier for a node.
+// Format: github:owner/repo/path@ref, gitlab:owner/repo/path@ref, local:path@ref
 func (p *Parser) buildNodeID(repoInfo *repository.RepositoryInfo, nodePath string) string {
 	if repoInfo == nil {
 		return nodePath
+	}
+	if repoInfo.Type == repository.Local {
+		return fmt.Sprintf("local:%s@%s", nodePath, repoInfo.Ref)
 	}
 	return fmt.Sprintf("%s:%s/%s/%s@%s",
 		repoInfo.Type, repoInfo.Owner, repoInfo.Repo, nodePath, repoInfo.Ref)
