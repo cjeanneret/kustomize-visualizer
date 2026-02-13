@@ -1,11 +1,25 @@
 ---
-description: Git commit message format and required trailers (tools, co-author)
+description: Git commit message format, required trailers (tools, models, agent), and signing
 alwaysApply: true
 ---
 
 # Git Commit Rules
 
 When creating a new commit (at the user's request), follow these rules.
+
+## Commit Signing (Mandatory)
+
+Every commit **must** be signed. Use the `-S` or `--gpg-sign` flag when committing:
+
+```bash
+git commit -S -m "Subject
+
+Body with trailers..."
+```
+
+If creating commits via scripts, rebase, or filter-branch, ensure the resulting commits are signed (e.g. `git rebase --exec 'git commit --amend --no-edit -S'` for rewriting).
+
+Verify signing with `git log -1 --show-signature`. The output should show "Good signature".
 
 ## Commit Message Format (Best Practices)
 
@@ -23,25 +37,23 @@ Reject empty or invalid names before rendering to avoid confusing
 errors in the graph. Validation runs on load and on name change.
 ```
 
-## Required Trailers (at the end of the message)
+## Required Trailers (Mandatory)
 
-After the body, add a blank line, then these trailers in order:
+After the body, add a blank line, then these trailers **in order**. All are required.
 
-1. **Tooling and AI**  
-   One or more lines describing:
-   - Tool(s) in use (e.g. Cursor, CLI, IDE)
-   - Model(s) in use (e.g. model name/version if applicable)
-   - AI agent(s) in use (e.g. agent or assistant name/type)
+1. **Tool** — One line, e.g. `Tool: Cursor`
+2. **Models** — One or more model names, e.g. `Models: claude-sonnet-4`
+3. **AI agent(s)** — The agent or assistant used, e.g. `AI agent(s): Composer (Cursor)`
 
-   Use a consistent label, e.g. `Tool:` / `Models:` / `AI agent(s):` or a single `Generated-with:` line. Example:
+Example:
 
-   ```
-   Tool: Cursor
-   Models: claude-sonnet-4, gpt-4o
-   AI agent(s): Auto (Cursor)
-   ```
+```
+Tool: Cursor
+Models: claude-sonnet-4
+AI agent(s): Composer (Cursor)
+```
 
-2. **Co-author for Cursor**  
+4. **Co-author for Cursor**  
    Add a standard Git co-author trailer so Cursor is credited:
 
    ```
@@ -60,15 +72,15 @@ errors in the graph. Validation runs on load and on name change.
 
 Tool: Cursor
 Models: claude-sonnet-4
-AI agent(s): Auto (Cursor)
+AI agent(s): Composer (Cursor)
 
 Co-authored-by: Cursor <cursor@cursor.com>
 ```
 
 ## Checklist Before Committing
 
+- [ ] **Signed**: `-S` flag used; `git log -1 --show-signature` shows "Good signature"
 - [ ] Subject ≤ 50 characters, imperative, capitalized, no trailing period
 - [ ] Single blank line between subject and body
 - [ ] Body wrapped at 72 characters
-- [ ] Trailers at the end: tool, model(s), AI agent(s)
-- [ ] Co-authored-by: Cursor (or project convention) at the very end
+- [ ] **Trailers (all required)**: `Tool:`, `Models:`, `AI agent(s):`, then `Co-authored-by: Cursor <cursor@cursor.com>` at the very end
