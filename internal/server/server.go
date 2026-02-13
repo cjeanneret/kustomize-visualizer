@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/cjeanner/kustomap/internal/build"
+	"github.com/cjeanner/kustomap/internal/cacert"
 	"github.com/cjeanner/kustomap/internal/export"
 	"github.com/cjeanner/kustomap/internal/fetcher"
 	"github.com/cjeanner/kustomap/internal/parser"
@@ -46,15 +47,17 @@ type AnalyzeResponse struct {
 
 // New builds a chi router with API and static file routes.
 // webRoot is the embedded web filesystem (e.g. fs.Sub(embedFS, "web")).
-func New(store storage.Storage, webRoot fs.FS) *chi.Mux {
+// caCollector collects CA certs from overlay hosts for Argo CD; may be nil to skip.
+func New(store storage.Storage, webRoot fs.FS, caCollector *cacert.Collector) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(setContentType)
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Post("/analyze", handleAnalyze(store))
+		r.Post("/analyze", handleAnalyze(store, caCollector))
 		r.Get("/graph/{id}", handleGetGraph(store))
+		r.Get("/graph/{id}/ca-bundle", handleGetCABundle(store))
 		r.Get("/node/{graphID}/{nodeID}", handleGetNode(store))
 		r.Post("/node/{graphID}/{nodeID}/build", handleBuildNode(store))
 	})
@@ -97,7 +100,7 @@ func setContentType(next http.Handler) http.Handler {
 	})
 }
 
-func handleAnalyze(store storage.Storage) http.HandlerFunc {
+func handleAnalyze(store storage.Storage, caCollector *cacert.Collector) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxAnalyzeBodyBytes)
 		var req AnalyzeRequest
@@ -163,6 +166,12 @@ func handleAnalyze(store storage.Storage) http.HandlerFunc {
 		graph.ID = uuid.New().String()
 		graph.Created = time.Now().Format(time.RFC3339)
 
+		// Collect CA certs from all unique hosts in the overlay stack (for Argo CD).
+		// Runs once after analysis; bundle is stored with the graph.
+		if caCollector != nil {
+			caCollector.CollectAndAttach(graph)
+		}
+
 		if err := store.SaveGraph(graph); err != nil {
 			log.Printf("SaveGraph error: %v", err)
 			respondError(w, http.StatusInternalServerError, "Failed to save graph")
@@ -172,6 +181,32 @@ func handleAnalyze(store storage.Storage) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(AnalyzeResponse{ID: graph.ID, Status: "success"})
+	}
+}
+
+// handleGetCABundle serves the CA bundle PEM for a graph (Argo CD use).
+func handleGetCABundle(store storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		graphID := chi.URLParam(r, "id")
+		if err := validation.ValidateGraphID(graphID); err != nil {
+			respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		graph, err := store.GetGraph(graphID)
+		if err != nil {
+			respondError(w, http.StatusNotFound, "Graph not found")
+			return
+		}
+
+		if graph.CABundle == "" {
+			respondError(w, http.StatusNotFound, "No CA bundle available for this graph")
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-pem-file")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=ca-bundle-%s.pem", graphID))
+		w.Write([]byte(graph.CABundle))
 	}
 }
 

@@ -56,6 +56,20 @@ func ValidateAnalyzeURL(rawURL string) error {
 	return nil
 }
 
+// ValidateHost ensures a hostname is safe for outbound connections (SSRF prevention).
+// Used when connecting to hosts derived from the graph (e.g. for CA cert collection).
+// Rejects private/loopback IPs and internal hostnames.
+func ValidateHost(host string) error {
+	h := strings.ToLower(strings.TrimSpace(host))
+	if h == "" {
+		return fmt.Errorf("host is required")
+	}
+	if idx := strings.Index(h, ":"); idx > 0 {
+		h = h[:idx]
+	}
+	return rejectPrivateOrReservedHost(h)
+}
+
 // rejectPrivateOrReservedHost prevents SSRF to internal/reserved addresses.
 func rejectPrivateOrReservedHost(host string) error {
 	// Strip port for resolution

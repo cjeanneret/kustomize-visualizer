@@ -232,6 +232,7 @@ class App {
         this.exportPngBtn = document.getElementById('export-png-btn');
         this.exportSvgBtn = document.getElementById('export-svg-btn');
         this.exportMermaidBtn = document.getElementById('export-mermaid-btn');
+        this.downloadCABundleBtn = document.getElementById('download-ca-bundle-btn');
         this.sidebar = document.getElementById('sidebar');
         this.sidebarContent = document.getElementById('sidebar-content');
         this.closeSidebar = document.getElementById('close-sidebar');
@@ -252,6 +253,7 @@ class App {
         this.exportPngBtn.addEventListener('click', () => this.exportPNG());
         this.exportSvgBtn.addEventListener('click', () => this.exportSVG());
         this.exportMermaidBtn.addEventListener('click', () => this.exportMermaid());
+        this.downloadCABundleBtn.addEventListener('click', () => this.downloadCABundle());
 
         this.loadTokensFromStorage();
         this.setupTokenPersistence();
@@ -727,6 +729,29 @@ class App {
             URL.revokeObjectURL(url);
         } catch (e) {
             this.showError('Failed to export Mermaid: ' + (e.message || String(e)));
+        }
+    }
+
+    async downloadCABundle() {
+        if (!this.currentGraphId) return;
+
+        try {
+            const res = await fetch(`/api/v1/graph/${this.currentGraphId}/ca-bundle`);
+            if (res.status === 404) {
+                this.showError('No CA bundle available for this graph');
+                return;
+            }
+            if (!res.ok) throw new Error(res.statusText);
+            const text = await res.text();
+            const blob = new Blob([text], { type: 'application/x-pem-file' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `ca-bundle-${this.currentGraphId}.pem`;
+            link.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            this.showError('Failed to download CA bundle: ' + (e.message || String(e)));
         }
     }
 

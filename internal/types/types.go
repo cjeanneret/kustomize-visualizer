@@ -5,8 +5,14 @@ type Graph struct {
 	ID       string            `json:"id"`
 	Elements []Element         `json:"elements"`
 	Created  string            `json:"created"`
-	// BaseURLs maps node ID -> repo base URL (e.g. https://gitlab.cee.redhat.com) for build
+	// BaseURLs maps node ID -> repo base URL (e.g. https://gitlab.example.com) for build
 	BaseURLs map[string]string `json:"base_urls,omitempty"`
+
+	// CABundle is the concatenated PEM of CA certs from all hosts in the overlay stack.
+	// Used for Argo CD when repos use self-signed or corporate CA certificates.
+	CABundle string `json:"ca_bundle,omitempty"`
+	// CABundleExpires is when the CA bundle is considered stale (RFC3339).
+	CABundleExpires string `json:"ca_bundle_expires,omitempty"`
 }
 
 // Element can be a node or an edge

@@ -67,7 +67,7 @@ func TestServerListensOnPort(t *testing.T) {
 
 	store := storage.NewMemoryStorage()
 	webRoot, _ := fs.Sub(webFS, "web")
-	r := server.New(store, webRoot)
+	r := server.New(store, webRoot, nil)
 	addr := ":" + strconv.Itoa(portNum)
 	listener, err = net.Listen("tcp", addr)
 	if err != nil {

@@ -247,12 +247,12 @@ func TestDetectRepository_RealURLs(t *testing.T) {
 			wantAmbiguous: "main/examples/va/hci/control-plane",
 		},
 		{
-			name:        "GitLab cee.redhat.com tree with branch path",
-			repoURL:     "https://gitlab.cee.redhat.com/cjeanner/rhos-gitops-examples/-/tree/components/new-base/environments/cifmw-demo/scale-out/deployment?ref_type=heads",
+			name:        "GitLab self-hosted tree with branch path",
+			repoURL:     "https://gitlab.example.com/group/gitops-examples/-/tree/components/base/environments/demo/scale-out/deployment?ref_type=heads",
 			wantType:    GitLab,
-			wantOwner:   "cjeanner",
-			wantRepo:    "rhos-gitops-examples",
-			wantAmbiguous: "components/new-base/environments/cifmw-demo/scale-out/deployment",
+			wantOwner:   "group",
+			wantRepo:    "gitops-examples",
+			wantAmbiguous: "components/base/environments/demo/scale-out/deployment",
 		},
 		{
 			name:        "rhoso-gitops tree branch with slashes",

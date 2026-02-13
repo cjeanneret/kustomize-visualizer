@@ -73,6 +73,29 @@ func TestValidateGraphID(t *testing.T) {
 	}
 }
 
+func TestValidateHost(t *testing.T) {
+	tests := []struct {
+		name    string
+		host    string
+		wantErr bool
+	}{
+		{"empty", "", true},
+		{"valid", "api.github.com", false},
+		{"valid with port", "gitlab.example.com:443", false},
+		{"localhost rejected", "localhost", true},
+		{"private IP rejected", "192.168.1.1", true},
+		{"loopback rejected", "127.0.0.1", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateHost(tt.host)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateHost(%q) err = %v, wantErr %v", tt.host, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestValidateNodeID(t *testing.T) {
 	tests := []struct {
 		name    string

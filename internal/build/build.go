@@ -41,7 +41,7 @@ func NewBuilder(githubToken, gitlabToken string) *Builder {
 // Build fetches the repo for the given node ID, runs kustomize build at the node path,
 // and returns the built YAML as a string. The node ID must be in format
 // type:owner/repo/path@ref (e.g. github:foo/bar/deploy/overlay@main).
-// baseURL is the repo base URL (e.g. https://gitlab.cee.redhat.com) for self-hosted GitLab/GitHub; empty for public github.com/gitlab.com.
+// baseURL is the repo base URL (e.g. https://gitlab.example.com) for self-hosted GitLab/GitHub; empty for public github.com/gitlab.com.
 func (b *Builder) Build(nodeID, baseURL string) (yamlOut string, err error) {
 	parts, err := ParseNodeID(nodeID)
 	if err != nil {

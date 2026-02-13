@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/cjeanner/kustomap/internal/cacert"
 	"github.com/cjeanner/kustomap/internal/server"
 	"github.com/cjeanner/kustomap/internal/storage"
 )
@@ -41,8 +42,9 @@ func main() {
 	}
 
 	store := storage.NewMemoryStorage()
+	caCollector := cacert.NewCollector(cacert.DefaultTTL)
 	webRoot, _ := fs.Sub(webFS, "web")
-	r := server.New(store, webRoot)
+	r := server.New(store, webRoot, caCollector)
 
 	addr := ":" + strconv.Itoa(port)
 	log.Printf("🚀 Server listening on http://localhost%s", addr)
