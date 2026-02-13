@@ -39,6 +39,29 @@ A web application to visualize and explore Kustomize overlay structures in GitOp
 - **Go 1.24+** (see `go.mod`)
 - For container: **Docker** or **Podman**
 
+## Install (user-level, no sudo)
+
+Install the binary to `~/.bin` and a systemd user unit to `~/.config/systemd/user`:
+
+```bash
+make install
+```
+
+Ensure `~/.bin` is in your `PATH`. Then enable and start the user service:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now kustomap.service
+```
+
+Open **http://localhost:3000**. To change the port, edit `~/.config/systemd/user/kustomap.service` and add e.g. `Environment=PORT=8080` under `[Service]`, then `systemctl --user daemon-reload` and `systemctl --user restart kustomap.service`.
+
+Uninstall:
+
+```bash
+make uninstall
+```
+
 ## Build and run
 
 ### Native (Go)

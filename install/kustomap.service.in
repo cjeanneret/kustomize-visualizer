@@ -1,0 +1,13 @@
+[Unit]
+Description=Kustomap - Kustomize overlay visualizer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%BINDIR%/kustomap
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
