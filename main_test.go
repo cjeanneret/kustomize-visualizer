@@ -79,12 +79,14 @@ func TestServerListensOnPort(t *testing.T) {
 		_ = http.Serve(listener, r)
 	}()
 
-	resp, err := http.Get("http://127.0.0.1:" + portStr + "/api/v1/graph/nonexistent")
+	// Use a valid UUID that is not in the store → 404
+	nonexistentUUID := "00000000-0000-4000-8000-000000000001"
+	resp, err := http.Get("http://127.0.0.1:" + portStr + "/api/v1/graph/" + nonexistentUUID)
 	if err != nil {
 		t.Fatalf("GET (server should be listening): %v", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("GET /api/v1/graph/nonexistent status = %d, want 404", resp.StatusCode)
+		t.Errorf("GET /api/v1/graph/%s status = %d, want 404", nonexistentUUID, resp.StatusCode)
 	}
 }

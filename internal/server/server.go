@@ -21,6 +21,13 @@ import (
 	"github.com/cjeanner/kustomap/internal/parser"
 	"github.com/cjeanner/kustomap/internal/repository"
 	"github.com/cjeanner/kustomap/internal/storage"
+	"github.com/cjeanner/kustomap/internal/validation"
+)
+
+// Max request body sizes for JSON endpoints (OWASP API4: Unrestricted Resource Consumption).
+const (
+	maxAnalyzeBodyBytes = 64 * 1024  // 64 KB for analyze (URL + tokens)
+	maxBuildBodyBytes   = 32 * 1024  // 32 KB for build (tokens only)
 )
 
 // AnalyzeRequest is the JSON body for POST /api/v1/analyze.
@@ -92,17 +99,18 @@ func setContentType(next http.Handler) http.Handler {
 
 func handleAnalyze(store storage.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxAnalyzeBodyBytes)
 		var req AnalyzeRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
-		if req.URL == "" {
-			http.Error(w, "URL is required", http.StatusBadRequest)
+		if err := validation.ValidateAnalyzeURL(req.URL); err != nil {
+			respondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
-		log.Printf("Analyzing repository: %s", req.URL)
+		log.Printf("Analyzing repository: %s", truncateForLog(req.URL, 256))
 
 		repoInfo, err := repository.DetectRepository(req.URL, "")
 		if err != nil {
@@ -135,7 +143,8 @@ func handleAnalyze(store storage.Storage) http.HandlerFunc {
 
 		f, err := fetcher.NewFetcher(repoInfo, token)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			log.Printf("NewFetcher error: %v", err)
+			respondError(w, http.StatusInternalServerError, "Failed to create fetcher")
 			return
 		}
 		log.Printf("✅ Created fetcher")
@@ -146,7 +155,8 @@ func handleAnalyze(store storage.Storage) http.HandlerFunc {
 
 		graph, err := p.Parse(searchPath)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			log.Printf("Parse error: %v", err)
+			respondError(w, http.StatusInternalServerError, "Failed to analyze repository")
 			return
 		}
 
@@ -154,7 +164,8 @@ func handleAnalyze(store storage.Storage) http.HandlerFunc {
 		graph.Created = time.Now().Format(time.RFC3339)
 
 		if err := store.SaveGraph(graph); err != nil {
-			respondError(w, http.StatusInternalServerError, fmt.Sprintf("failed to save graph: %v", err))
+			log.Printf("SaveGraph error: %v", err)
+			respondError(w, http.StatusInternalServerError, "Failed to save graph")
 			return
 		}
 		log.Printf("✅ Graph saved with ID: %s (%d elements)", graph.ID, len(graph.Elements))
@@ -167,10 +178,11 @@ func handleAnalyze(store storage.Storage) http.HandlerFunc {
 func handleGetGraph(store storage.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		graphID := chi.URLParam(r, "id")
-		format := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("format")))
-		if format == "" {
-			format = "json"
+		if err := validation.ValidateGraphID(graphID); err != nil {
+			respondError(w, http.StatusBadRequest, err.Error())
+			return
 		}
+		format := validation.ValidateFormat(r.URL.Query().Get("format"))
 		log.Printf("Retrieving graph: %s (format: %s)", graphID, format)
 
 		graph, err := store.GetGraph(graphID)
@@ -183,10 +195,9 @@ func handleGetGraph(store storage.Storage) http.HandlerFunc {
 		case "mermaid":
 			mermaidCode := export.ToMermaid(graph)
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			// graphID is already validated as UUID, safe for header
 			w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=graph-%s.mmd", graphID))
 			w.Write([]byte(mermaidCode))
-		case "json":
-			fallthrough
 		default:
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(graph)
@@ -198,13 +209,20 @@ func handleGetNode(store storage.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		graphID := chi.URLParam(r, "graphID")
 		nodeID := chi.URLParam(r, "nodeID")
-
+		if err := validation.ValidateGraphID(graphID); err != nil {
+			respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		decodedNodeID, err := url.QueryUnescape(nodeID)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "Invalid node ID")
 			return
 		}
-		log.Printf("Retrieving node: %s from graph: %s", nodeID, graphID)
+		if err := validation.ValidateNodeID(decodedNodeID); err != nil {
+			respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		log.Printf("Retrieving node: %s from graph: %s", truncateForLog(nodeID, 128), graphID)
 
 		nodeDetails, err := store.GetNode(graphID, decodedNodeID)
 		if err != nil {
@@ -232,16 +250,23 @@ func handleBuildNode(store storage.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		graphID := chi.URLParam(r, "graphID")
 		nodeID := chi.URLParam(r, "nodeID")
-
+		if err := validation.ValidateGraphID(graphID); err != nil {
+			respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		decodedNodeID, err := url.QueryUnescape(nodeID)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "Invalid node ID")
 			return
 		}
+		if _, err := build.ParseNodeID(decodedNodeID); err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid node ID format")
+			return
+		}
 
 		nodeDetails, err := store.GetNode(graphID, decodedNodeID)
 		if err != nil {
-			respondError(w, http.StatusNotFound, err.Error())
+			respondError(w, http.StatusNotFound, "Node not found")
 			return
 		}
 
@@ -254,8 +279,12 @@ func handleBuildNode(store storage.Storage) http.HandlerFunc {
 			return
 		}
 
+		r.Body = http.MaxBytesReader(w, r.Body, maxBuildBodyBytes)
 		var req BuildRequest
-		_ = json.NewDecoder(r.Body).Decode(&req)
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
 
 		graph, err := store.GetGraph(graphID)
 		if err != nil {
@@ -271,7 +300,7 @@ func handleBuildNode(store storage.Storage) http.HandlerFunc {
 		yamlOut, err := b.Build(decodedNodeID, baseURL)
 		if err != nil {
 			log.Printf("Build failed for node %s: %v", decodedNodeID, err)
-			respondError(w, http.StatusUnprocessableEntity, err.Error())
+			respondError(w, http.StatusUnprocessableEntity, "Build failed")
 			return
 		}
 
@@ -284,4 +313,12 @@ func respondError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(AnalyzeResponse{Status: "error", Message: message})
+}
+
+// truncateForLog truncates s to maxLen for safe logging (avoids huge or sensitive data in logs).
+func truncateForLog(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
