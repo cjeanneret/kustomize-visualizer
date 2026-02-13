@@ -81,6 +81,27 @@ body, html {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+/* URL input with optional Browse button */
+.input-with-browse {
+    display: flex;
+    gap: 8px;
+}
+.input-with-browse input {
+    flex: 1;
+}
+.btn-browse {
+    flex-shrink: 0;
+    padding: 12px 20px;
+    background: #95a5a6;
+    color: white;
+}
+.btn-browse:hover {
+    background: #7f8c8d;
+}
+.input-with-browse.hidden .btn-browse {
+    display: none;
+}
+
 .input-with-toggle {
     position: relative;
 }
@@ -233,11 +254,31 @@ button:disabled {
     z-index: 100;
 }
 
+.toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
 #toolbar h2.toolbar-title {
     display: flex;
     align-items: center;
     gap: 12px;
     font-size: 18px;
+    font-weight: 600;
+}
+.local-branch-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    font-size: 13px;
+}
+.local-branch-badge .local-branch-label {
+    color: rgba(255, 255, 255, 0.8);
+}
+.local-branch-badge .local-branch-value {
     font-weight: 600;
 }
 
@@ -669,5 +710,144 @@ body:has(#graph-section:not(.hidden)) #github-repo-link:hover {
     font-size: inherit;
     background: none;
     padding: 0;
+}
+
+/* Browse modal */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.modal.hidden {
+    display: none !important;
+}
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+.modal-panel {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    max-height: 70vh;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.modal-header {
+    flex: 0 0 auto;
+    padding: 16px 20px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+}
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #2c3e50;
+}
+.modal-close {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    font-size: 28px;
+    line-height: 1;
+    background: transparent;
+    color: #666;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.modal-close:hover {
+    background: #e0e0e0;
+    color: #333;
+}
+.modal-body {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+}
+.modal-footer {
+    flex: 0 0 auto;
+    padding: 16px 20px;
+    border-top: 1px solid #ddd;
+    background: #f8f9fa;
+}
+.browse-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #666;
+}
+.browse-breadcrumb a,
+.browse-breadcrumb span {
+    color: #3498db;
+    cursor: pointer;
+}
+.browse-breadcrumb a:hover {
+    text-decoration: underline;
+}
+.browse-breadcrumb .separator {
+    color: #999;
+    cursor: default;
+}
+.browse-loading {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+}
+.browse-loading.hidden {
+    display: none !important;
+}
+.browse-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.browse-list li {
+    padding: 12px 16px;
+    margin: 4px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+.browse-list li:hover {
+    background: #e8f4fc;
+}
+.browse-list li .icon-folder {
+    color: #f59e0b;
+    flex-shrink: 0;
+}
+.btn-primary {
+    padding: 10px 20px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-primary:hover {
+    background: #5568d3;
+}
+.btn-primary:disabled {
+    background: #ccc;
+    cursor: not-allowed;
 }
 
