@@ -25,6 +25,8 @@ func NewFetcher(info *repository.RepositoryInfo, token string) (Fetcher, error) 
 		return NewGitHubFetcher(info, token)
 	case repository.GitLab:
 		return NewGitLabFetcher(info, token)
+	case repository.Local:
+		return NewLocalFetcher(info, token)
 	default:
 		return nil, fmt.Errorf("unsupported repository type: %s", info.Type)
 	}
